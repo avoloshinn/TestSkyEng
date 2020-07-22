@@ -5,14 +5,12 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
-import com.github.piasy.rxandroidaudio.PlayConfig
-import com.github.piasy.rxandroidaudio.RxAudioPlayer
 import com.skyeng.test.R
-import com.skyeng.test.data.Word
+import com.skyeng.test.entities.MeaningEntity
+import com.skyeng.test.entities.WordEntity
 import com.skyeng.test.presenters.WordPresenter
 import com.skyeng.test.ui.base.BaseFragment
 import com.skyeng.test.ui.base.BaseView
-import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.fragment_word.*
 import javax.inject.Inject
 
@@ -29,7 +27,7 @@ class WordFragment : BaseFragment(), WordView {
     companion object {
         const val KEY_WORD = "com.skyeng.test.ui.word"
 
-        fun newInstance(word: Word): WordFragment {
+        fun newInstance(word: WordEntity): WordFragment {
             val fragment = WordFragment()
             val bundle = Bundle()
             bundle.putParcelable(KEY_WORD, word)
@@ -41,11 +39,12 @@ class WordFragment : BaseFragment(), WordView {
     @Inject
     lateinit var presenter: WordPresenter
 
-    private fun getWord(): Word = arguments?.getParcelable(KEY_WORD)
+    private fun getWord(): WordEntity = arguments?.getParcelable(KEY_WORD)
         ?: throw IllegalArgumentException("Word can't be null. Please check that it has been already set.")
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        presenter.attachView(this)
         initToolbar()
         initUI()
     }
@@ -63,28 +62,29 @@ class WordFragment : BaseFragment(), WordView {
 
     private fun initUI() {
         val word = getWord()
+        val meaning: MeaningEntity? = word?.meanings?.get(0)
         Glide.with(context!!)
-            .load(word?.meanings[0]?.formatImageUrl() ?: "")
+            .load(meaning?.formatImageUrl() ?: "")
             .into(imageWord)
 
-        textWord.text = getString(R.string.word_template, word.text, word?.meanings[0]?.transcription ?: "")
-        textTranslate.text = word?.meanings[0]?.translation?.text ?: ""
-        textDescription.text = word?.meanings[0]?.translation?.note ?: ""
+        textWord.text = getString(R.string.word_template, word.text, meaning?.transcription ?: "")
+        textTranslate.text = meaning?.translation?.text ?: ""
+        textDescription.text = meaning?.translation?.note ?: ""
 
         imagePlaySound.setOnClickListener {
-            RxAudioPlayer.getInstance()
-                .play(PlayConfig.url(word.meanings[0].formatSoundUrl()).build())
-                .subscribeOn(Schedulers.io())
-                .subscribe()
+            presenter.loadSound(meaning?.formatSoundUrl() ?: "")
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        presenter.detachView()
+    }
+
     override fun showProgress() {
-        TODO("Not yet implemented")
     }
 
     override fun hideProgress() {
-        TODO("Not yet implemented")
     }
 
     override fun showError(error: String) {

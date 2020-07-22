@@ -1,8 +1,7 @@
 package com.skyeng.test.network
 
-import com.skyeng.test.data.Word
-import io.reactivex.Single
-import retrofit2.http.Body
+import com.skyeng.test.network.dto.WordModel
+import io.reactivex.Observable
 import retrofit2.http.GET
 import retrofit2.http.QueryMap
 
@@ -12,5 +11,5 @@ import retrofit2.http.QueryMap
 interface SkyengApi {
 
     @GET("words/search")
-    fun searchTranslate(@QueryMap params: HashMap<String, Any>): Single<MutableList<Word>>
+    fun searchTranslate(@QueryMap params: HashMap<String, Any>): Observable<List<WordModel>>
 }

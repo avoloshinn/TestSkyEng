@@ -1,6 +1,5 @@
 package com.skyeng.test.ui.search
 
-import android.annotation.SuppressLint
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -8,7 +7,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.skyeng.test.R
-import com.skyeng.test.data.Word
+import com.skyeng.test.entities.WordEntity
 import com.skyeng.test.navigation.Navigation
 import com.skyeng.test.presenters.SearchPresenter
 import com.skyeng.test.ui.adapters.WordAdapter
@@ -20,11 +19,7 @@ import com.skyeng.test.ui.list.OnItemClickedListener
 import com.skyeng.test.ui.list.ViewType
 import com.skyeng.test.ui.word.WordFragment
 import com.skyeng.test.utils.Constants
-import io.reactivex.Observable
-import io.reactivex.ObservableOnSubscribe
-import io.reactivex.android.schedulers.AndroidSchedulers
 import kotlinx.android.synthetic.main.fragment_search.*
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 /**
@@ -49,38 +44,28 @@ class SearchFragment : BaseFragment(), SearchView, OnItemClickedListener<ViewTyp
     lateinit var presenter: SearchPresenter
 
     private var adapter: WordAdapter? = null
-    private var page: Int = 1
 
-    @SuppressLint("CheckResult")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        presenter.attachView(this)
         initRecyclerView()
 
-        Observable.create(ObservableOnSubscribe<String> { subscriber ->
-            searchBar?.addTextChangeListener(object : TextWatcher {
-                override fun afterTextChanged(s: Editable?) {
-                    subscriber.onNext(s?.toString() ?: "")
-                }
-
-                override fun beforeTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    count: Int,
-                    after: Int
-                ) {
-                }
-
-                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                }
-            })
-        })
-            .debounce(250, TimeUnit.MILLISECONDS)
-            .distinctUntilChanged()
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe { searchedText ->
-                page = 1
-                load(searchedText, false, page)
+        searchBar?.addTextChangeListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                presenter.afterTextChanged(s?.toString() ?: "")
             }
+
+            override fun beforeTextChanged(
+                s: CharSequence?,
+                start: Int,
+                count: Int,
+                after: Int
+            ) {
+            }
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+            }
+        })
     }
 
     private fun initRecyclerView() {
@@ -94,8 +79,7 @@ class SearchFragment : BaseFragment(), SearchView, OnItemClickedListener<ViewTyp
             layoutManager
         ) {
             if (adapter?.hasBottomProgress == true && adapter?.hasBottomReloader == false) {
-                page += 1
-                load(searchBar.text ?: "", true, page)
+                presenter.searchTranslate(true, searchBar.text ?: "")
             }
         }
 
@@ -109,14 +93,6 @@ class SearchFragment : BaseFragment(), SearchView, OnItemClickedListener<ViewTyp
         recyclerView.adapter = adapter
         recyclerView.layoutManager = layoutManager
         recyclerView.addOnScrollListener(scrollListener)
-    }
-
-    private fun load(search: String = "", loadMore: Boolean = false, page: Int = 1) {
-        val params = hashMapOf<String, Any>()
-        params["pageSize"] = Constants.ITEMS_PER_PAGE
-        params["search"] = search
-        params["page"] = page
-        presenter.searchTranslate(loadMore, params)
     }
 
     override fun showSearchedWords(words: MutableList<ViewType>) {
@@ -135,9 +111,9 @@ class SearchFragment : BaseFragment(), SearchView, OnItemClickedListener<ViewTyp
         adapter?.showReloadItem()
     }
 
-    override fun onStop() {
-        super.onStop()
-        presenter.stopSubscriptions()
+    override fun onDestroy() {
+        super.onDestroy()
+        presenter.detachView()
     }
 
     override fun onDestroyView() {
@@ -164,7 +140,7 @@ class SearchFragment : BaseFragment(), SearchView, OnItemClickedListener<ViewTyp
     override fun onItemClicked(item: ViewType, view: View?) {
         Navigation.showFragmentBack(
             fragmentManager!!,
-            WordFragment.newInstance(item as? Word ?: return)
+            WordFragment.newInstance(item as? WordEntity ?: return)
         )
     }
 }
