@@ -76,8 +76,8 @@ class WordFragment : BaseFragment(), WordView {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
+    override fun onStop() {
+        super.onStop()
         presenter.detachView()
     }
 

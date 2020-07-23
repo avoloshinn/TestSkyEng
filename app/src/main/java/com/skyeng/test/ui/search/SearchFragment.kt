@@ -111,8 +111,8 @@ class SearchFragment : BaseFragment(), SearchView, OnItemClickedListener<ViewTyp
         adapter?.showReloadItem()
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
+    override fun onStop() {
+        super.onStop()
         presenter.detachView()
     }
 
